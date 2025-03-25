@@ -5,7 +5,7 @@ import en from './locales/en.js'
 const savedLocale = localStorage.getItem('locale') || 'zh'
 
 export const i18n = createI18n({
-    legacy: false,
+    legacy: true,
     locale: savedLocale,
     fallbackLocale: 'zh',
     messages: {
