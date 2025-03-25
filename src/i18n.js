@@ -1,14 +1,14 @@
 import { createI18n } from 'vue-i18n'
-// Import language files directly with explicit paths to ensure they're bundled properly
-// This helps with Cloudflare Pages deployment
-import zh from './locales/zh.js'
-import en from './locales/en.js'
+// Load all locale files synchronously using Vite's glob import
+const localeModules = import.meta.glob('./locales/*.js', { eager: true })
+const messages = Object.keys(localeModules).reduce((acc, path) => {
+    const locale = path.match(/\.\/locales\/(.+)\.js$/)[1]
+    acc[locale] = localeModules[path].default
+    return acc
+}, {})
 
 // Create messages object with imported translations
-const messages = {
-    zh,
-    en
-}
+
 
 // Get saved locale or default to zh
 // Use try-catch to handle potential localStorage issues in Cloudflare Pages
@@ -26,10 +26,7 @@ export const i18n = createI18n({
     legacy: true,
     locale: savedLocale,
     fallbackLocale: 'zh',
-    messages: {
-        zh,
-        en
-    }
+    messages
 })
 
 // Set the locale value
