@@ -4,12 +4,14 @@ import { ref, computed } from 'vue'
 import BaseConverter from './components/BaseConverter.vue'
 import TimestampConverter from './components/TimestampConverter.vue'
 import JsonFormatter from './components/JsonFormatter.vue'
+import { setLocale } from './i18n'
 
 const { t, locale } = useI18n()
 const activeTab = ref('base')
 
 const toggleLanguage = () => {
-  locale.value = locale.value === 'zh' ? 'en' : 'zh'
+  const newLocale = locale.value === 'zh' ? 'en' : 'zh'
+  setLocale(newLocale)
 }
 
 const tabs = computed(() => [
