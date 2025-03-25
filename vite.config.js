@@ -12,9 +12,14 @@ export default defineConfig({
         main: './index.html'
       },
       output: {
-        manualChunks: {
-          'vue-i18n': ['vue-i18n'],
-          'locales': ['./src/locales/zh.js', './src/locales/en.js']
+        // Ensure locales are included in the main chunk to avoid loading issues
+        // This helps with Cloudflare Pages deployment
+        manualChunks(id) {
+          if (id.includes('node_modules/vue-i18n')) {
+            return 'vue-i18n'
+          }
+          // Don't separate locales into a separate chunk
+          // This ensures they're available immediately
         }
       }
     }
