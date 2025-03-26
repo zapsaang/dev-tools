@@ -197,7 +197,7 @@ body {
   }
 }
 
-/* 预留广告位样式 */
+/* Reserved ad slot style */
 .ad-container {
   grid-column: 1 / -1;
   min-height: 90px;
