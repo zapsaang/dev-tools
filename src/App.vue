@@ -10,6 +10,7 @@ const isPortrait = ref(window.innerWidth <= 768)
 
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value
+  document.body.style.overflow = isPortrait.value && isSidebarOpen.value ? 'hidden' : ''
 }
 
 const handleResize = () => {
@@ -46,9 +47,10 @@ const tabs = [
 <template>
   <div class="app-container">
     <header class="header">
-      <button class="hamburger-btn" @click="toggleSidebar">
+      <button class="hamburger-btn" @click="toggleSidebar" :class="{ 'is-open': isSidebarOpen }">
         <svg viewBox="0 0 24 24" width="24" height="24">
-          <path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+          <path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z" v-if="!isSidebarOpen"/>
+          <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" v-else/>
         </svg>
       </button>
       <h1 class="header-title">Developer Tools</h1>
@@ -125,6 +127,11 @@ body {
   align-items: center;
   justify-content: center;
   margin-right: 16px;
+  transition: transform 0.3s ease;
+}
+
+.hamburger-btn.is-open {
+  transform: rotate(180deg);
 }
 
 .header-title {
@@ -141,8 +148,9 @@ body {
 }
 
 .sidebar {
-  width: 260px;
-  min-width: 260px;
+  --sidebar-width: 260px;
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
   background-color: #fff;
   border-right: 1px solid #e8e8e8;
   display: flex;
@@ -174,6 +182,14 @@ body {
     bottom: 0;
     background-color: rgba(0, 0, 0, 0.5);
     z-index: 90;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  .sidebar-open ~ .main-content .overlay {
+    opacity: 1;
+    visibility: visible;
   }
 }
 
@@ -268,7 +284,53 @@ body {
   overflow-y: auto;
   display: flex;
   min-width: 0;
-  width: calc(100% - 260px);
+  width: 100%;
+  transition: margin-left 0.3s ease;
+  margin-left: 0;
+}
+
+@media (min-width: 769px) {
+  .sidebar {
+    position: fixed;
+    height: calc(100vh - 60px);
+    transform: translateX(0);
+    transition: transform 0.3s ease;
+    z-index: 10;
+  }
+
+  .main-content {
+    margin-left: var(--sidebar-width, 260px);
+    transition: all 0.3s ease;
+    width: calc(100% - var(--sidebar-width, 260px));
+    min-height: calc(100vh - 60px);
+    position: relative;
+  }
+
+  .sidebar:not(.sidebar-open) {
+    transform: translateX(-100%);
+  }
+
+  .sidebar:not(.sidebar-open) ~ .main-content {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100vw;
+    position: relative;
+    left: 0;
+    right: 0;
+    padding-left: 0;
+    transform: translateX(0);
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+  }
+
+  .tool-container {
+    padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
 }
 
 .tool-container {
