@@ -1,10 +1,40 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import BaseConverter from './components/BaseConverter.vue'
 import TimestampConverter from './components/TimestampConverter.vue'
 import JsonFormatter from './components/JsonFormatter.vue'
 
 const activeTab = ref('base')
+const isSidebarOpen = ref(window.innerWidth > 768)
+const isPortrait = ref(window.innerWidth <= 768)
+
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value
+}
+
+const handleResize = () => {
+  isPortrait.value = window.innerWidth <= 768
+  if (!isPortrait.value) {
+    isSidebarOpen.value = true
+  } else {
+    isSidebarOpen.value = false
+  }
+}
+
+const handleTabChange = (tabId) => {
+  activeTab.value = tabId
+  if (isPortrait.value) {
+    isSidebarOpen.value = false
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+})
 
 const tabs = [
   { id: 'base', label: 'Base Converter' },
@@ -15,25 +45,32 @@ const tabs = [
 
 <template>
   <div class="app-container">
-    <aside class="sidebar">
-      <div class="logo">
-        <h1>Developer Tools</h1>
-        
-      </div>
-      <nav class="tool-nav">
-        <button v-for="tab in tabs" :key="tab.id" :class="['nav-item', { active: activeTab === tab.id }]"
-          @click="activeTab = tab.id">
-          {{ tab.label }}
-        </button>
-      </nav>
-    </aside>
-    <main class="main-content">
-      <div class="tool-container">
+    <header class="header">
+      <button class="hamburger-btn" @click="toggleSidebar">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+          <path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+        </svg>
+      </button>
+      <h1 class="header-title">Developer Tools</h1>
+    </header>
+    <div class="content-wrapper">
+      <aside class="sidebar" :class="{ 'sidebar-open': isSidebarOpen }">
+        <nav class="tool-nav">
+          <button v-for="tab in tabs" :key="tab.id" :class="['nav-item', { active: activeTab === tab.id }]"
+            @click="handleTabChange(tab.id)">
+            {{ tab.label }}
+          </button>
+        </nav>
+      </aside>
+      <main class="main-content">
+        <div class="tool-container">
+          <div v-if="isPortrait && isSidebarOpen" class="overlay" @click="toggleSidebar"></div>
         <BaseConverter v-show="activeTab === 'base'" />
         <TimestampConverter v-show="activeTab === 'timestamp'" />
         <JsonFormatter v-show="activeTab === 'json'" />
-      </div>
-    </main>
+              </div>
+      </main>
+    </div>
   </div>
 </template>
 
@@ -57,6 +94,7 @@ body {
 .app-container {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   background-color: #f0f2f5;
   width: 100%;
   overflow: hidden;
@@ -65,6 +103,41 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
+}
+
+.header {
+  height: 60px;
+  background-color: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  z-index: 1000;
+}
+
+.hamburger-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16px;
+}
+
+.header-title {
+  font-size: 1.2em;
+  margin: 0;
+  color: var(--text-color);
+}
+
+.content-wrapper {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
 }
 
 .sidebar {
@@ -76,6 +149,32 @@ body {
   flex-direction: column;
   padding: 20px 0;
   overflow-y: auto;
+  height: 100%;
+  transition: transform 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translateX(-100%);
+    z-index: 100;
+  }
+
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+
+  .overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 90;
+  }
 }
 
 .logo {
