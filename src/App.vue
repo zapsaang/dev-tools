@@ -1,37 +1,24 @@
 <script setup>
-import { useI18n } from 'vue-i18n'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import BaseConverter from './components/BaseConverter.vue'
 import TimestampConverter from './components/TimestampConverter.vue'
 import JsonFormatter from './components/JsonFormatter.vue'
-import { setLocale } from './i18n'
 
-const { t, locale } = useI18n()
 const activeTab = ref('base')
 
-const toggleLanguage = () => {
-  const newLocale = locale.value === 'zh' ? 'en' : 'zh'
-  setLocale(newLocale)
-}
-
-const tabs = computed(() => [
-  { id: 'base', label: t('tabs.baseConverter') },
-  { id: 'timestamp', label: t('tabs.timestampConverter') },
-  { id: 'json', label: t('tabs.jsonFormatter') }
-])
+const tabs = [
+  { id: 'base', label: 'Base Converter' },
+  { id: 'timestamp', label: 'Timestamp Converter' },
+  { id: 'json', label: 'JSON Formatter' }
+]
 </script>
 
 <template>
   <div class="app-container">
     <aside class="sidebar">
       <div class="logo">
-        <h1>{{ t('header.title') }}</h1>
-        <div class="language-selector">
-          <span>{{ t('languageSelector.label') }}:</span>
-          <button @click="toggleLanguage" class="language-button">
-            {{ t(`languageSelector.${locale}`) }}
-          </button>
-        </div>
+        <h1>Developer Tools</h1>
+        
       </div>
       <nav class="tool-nav">
         <button v-for="tab in tabs" :key="tab.id" :class="['nav-item', { active: activeTab === tab.id }]"

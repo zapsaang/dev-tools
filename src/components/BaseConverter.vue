@@ -1,9 +1,9 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+
 import { copyToClipboard } from '../utils/clipboard.js'
 
-const { t } = useI18n()
+
 const inputNumber = ref('')
 const fromBase = ref(10)
 const toBase = ref(16)
@@ -14,41 +14,41 @@ const convertedNumber = computed(() => {
     if (!inputNumber.value) return ''
     try {
         const decimal = parseInt(inputNumber.value, fromBase.value)
-        if (isNaN(decimal)) return t('baseConverter.invalidInput')
+        if (isNaN(decimal)) return "Invalid input"
         return decimal.toString(toBase.value).toUpperCase()
     } catch (e) {
-        return t('baseConverter.invalidInput')
+        return "Invalid input"
     }
 })
 </script>
 
 <template>
 <div class="converter-container">
-    <h2>{{ t('baseConverter.title') }}</h2>
+    <h2>Base Converter</h2>
     <div class="input-group">
-        <input v-model="inputNumber" type="text" :placeholder="t('baseConverter.input')" class="number-input" />
+        <input v-model="inputNumber" type="text" placeholder="Enter number" class="number-input" />
     </div>
     <div class="base-selectors">
         <div class="base-group">
-            <label>{{ t('baseConverter.fromBase') }}</label>
+            <label>From Base:</label>
             <select v-model="fromBase">
                 <option v-for="base in availableBases" :key="base" :value="base">
-                    {{ base }} {{ t('baseConverter.base') }}
+                    {{ base }} Base
                 </option>
             </select>
         </div>
         <div class="base-group">
-            <label>{{ t('baseConverter.toBase') }}</label>
+            <label>To Base:</label>
             <select v-model="toBase">
                 <option v-for="base in availableBases" :key="base" :value="base">
-                    {{ base }} {{ t('baseConverter.base') }}
+                    {{ base }} Base
                 </option>
             </select>
         </div>
     </div>
 
     <div class="result">
-        <h3>{{ t('baseConverter.result') }}</h3>
+        <h3>Conversion Result</h3>
         <div class="result-container">
             <pre class="result-value">{{ convertedNumber }}</pre>
             <button v-if="convertedNumber" @click="copyToClipboard(convertedNumber)" class="copy-button">

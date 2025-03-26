@@ -1,9 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { copyToClipboard } from '../utils/clipboard.js'
 
-const { t } = useI18n()
 const timestamp = ref('')
 const unit = ref('seconds')
 
@@ -11,7 +9,7 @@ const convertedTime = computed(() => {
     if (!timestamp.value) return ''
     try {
         let time = parseInt(timestamp.value)
-        if (isNaN(time)) return t('timestampConverter.invalidInput')
+        if (isNaN(time)) return "Invalid input"
 
         // Convert to milliseconds if input is in seconds
         if (unit.value === 'seconds') {
@@ -20,12 +18,12 @@ const convertedTime = computed(() => {
 
         const date = new Date(time)
         if (date.toString() === 'Invalid Date') {
-            return t('timestampConverter.invalidInput')
+            return "Invalid input"
         }
 
         return date.toLocaleString()
     } catch (e) {
-        return t('timestampConverter.invalidInput')
+        return "Invalid input"
     }
 })
 
@@ -36,26 +34,26 @@ function clearInput() {
 
 <template>
 <div class="converter-container">
-    <h2>{{ t('timestampConverter.title') }}</h2>
+    <h2>Timestamp Converter</h2>
     <div class="input-section">
         <div class="input-group">
-            <input v-model="timestamp" type="text" :placeholder="t('timestampConverter.input')" class="timestamp-input" />
-            <button @click="clearInput" class="clear-button">{{ t('timestampConverter.clear') }}</button>
+            <input v-model="timestamp" type="text" placeholder="Enter timestamp" class="timestamp-input" />
+            <button @click="clearInput" class="clear-button">Clear</button>
         </div>
         <div class="format-options">
             <label class="radio-label">
                 <input type="radio" v-model="unit" value="seconds" />
-                {{ t('timestampConverter.seconds') }}
+                Seconds
             </label>
             <label class="radio-label">
                 <input type="radio" v-model="unit" value="milliseconds" />
-                {{ t('timestampConverter.milliseconds') }}
+                Milliseconds
             </label>
         </div>
     </div>
 
     <div class="result">
-        <h3>{{ t('timestampConverter.result') }}</h3>
+        <h3>Conversion Result</h3>
         <div class="result-container">
             <pre class="result-value">{{ convertedTime }}</pre>
             <button v-if="convertedTime" @click="copyToClipboard(convertedTime)" class="copy-button">

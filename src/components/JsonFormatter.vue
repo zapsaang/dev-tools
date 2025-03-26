@@ -1,9 +1,9 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+
 import { copyToClipboard } from '../utils/clipboard.js'
 
-const { t } = useI18n()
+
 const jsonInput = ref('')
 const formatType = ref('beautify')
 
@@ -22,7 +22,7 @@ const processedJson = computed(() => {
                 return ''
         }
     } catch (e) {
-        return t('jsonFormatter.invalidJson')
+        return "Invalid JSON"
     }
 })
 
@@ -33,29 +33,29 @@ function clearInput() {
 
 <template>
 <div class="converter-container">
-    <h2>{{ t('jsonFormatter.title') }}</h2>
+    <h2>JSON Formatter</h2>
     <div class="format-options">
         <label class="radio-label">
             <input type="radio" v-model="formatType" value="beautify" />
-            {{ t('jsonFormatter.beautify') }}
+            Beautify
         </label>
         <label class="radio-label">
             <input type="radio" v-model="formatType" value="compress" />
-            {{ t('jsonFormatter.compress') }}
+            Compress
         </label>
         <label class="radio-label">
             <input type="radio" v-model="formatType" value="escape" />
-            {{ t('jsonFormatter.escape') }}
+            Escape
         </label>
     </div>
 
     <div class="input-section">
-        <textarea v-model="jsonInput" :placeholder="t('jsonFormatter.input')" class="json-input"></textarea>
-        <button @click="clearInput" class="clear-button">{{ t('jsonFormatter.clear') }}</button>
+        <textarea v-model="jsonInput" placeholder="Enter JSON" class="json-input"></textarea>
+        <button @click="clearInput" class="clear-button">Clear</button>
     </div>
 
     <div class="result">
-        <h3>{{ t('jsonFormatter.result') }}</h3>
+        <h3>Formatted Result</h3>
         <div class="result-container">
             <pre class="result-value">{{ processedJson }}</pre>
             <button v-if="processedJson" @click="copyToClipboard(processedJson)" class="copy-button">
