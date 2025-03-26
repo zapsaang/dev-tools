@@ -14,20 +14,19 @@ export default defineConfig({
         main: './index.html'
       },
       output: {
-        // Ensure locales are included in the main chunk to avoid loading issues
-        // This helps with Cloudflare Pages deployment
+        // Remove external vue-i18n reference
         manualChunks(id) {
           if (id.includes('node_modules/vue-i18n') || id.includes('src/locales')) {
             return 'vendor'
           }
-          // Don't separate locales into a separate chunk
-          // This ensures they're available immediately
+          // Simplified manual chunks configuration
         }
       }
     }
   },
   optimizeDeps: {
-    include: ['vue-i18n']
+    // Remove vue-i18n from include
+    include: []
   },
   resolve: {
     alias: {
