@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 
 import { copyToClipboard } from '../utils/clipboard.js'
 
@@ -201,6 +201,24 @@ function clearInput() {
     jsonInput.value = ''
     collapsedNodes.value.clear()
 }
+
+// 全部展开功能
+function expandAll() {
+    collapsedNodes.value.clear()
+}
+
+// 检查是否有任何节点被折叠
+const hasCollapsedNodes = computed(() => {
+    return collapsedNodes.value.size > 0
+})
+
+// 监听 enableFolding 变化，当取消折叠功能时自动展开所有节点
+watch(enableFolding, (newValue, oldValue) => {
+    if (oldValue === true && newValue === false) {
+        // 当从启用折叠变为禁用折叠时，自动展开所有节点
+        collapsedNodes.value.clear()
+    }
+})
 </script>
 
 <template>
@@ -231,6 +249,11 @@ function clearInput() {
             <input type="checkbox" v-model="enableFolding" />
             Enable Folding
         </label>
+        <button v-if="enableFolding && hasCollapsedNodes" 
+                @click="expandAll" 
+                class="expand-all-button">
+            Expand All
+        </button>
     </div>
 
     <div class="input-section">
@@ -307,6 +330,7 @@ function clearInput() {
 .display-options {
     display: flex;
     gap: 20px;
+    align-items: center;
     margin-bottom: 20px;
     padding: 12px;
     background-color: #f8f9fa;
@@ -321,6 +345,26 @@ function clearInput() {
     cursor: pointer;
     font-size: 14px;
     color: #495057;
+}
+
+.expand-all-button {
+    padding: 4px 12px;
+    background: #409eff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s;
+    margin-left: auto;
+}
+
+.expand-all-button:hover {
+    background: #66b1ff;
+}
+
+.expand-all-button:active {
+    background: #3a8ee6;
 }
 
 .checkbox-label input[type="checkbox"] {
@@ -547,6 +591,12 @@ function clearInput() {
     .display-options {
         flex-direction: column;
         gap: 12px;
+        align-items: stretch;
+    }
+    
+    .expand-all-button {
+        margin-left: 0;
+        align-self: flex-start;
     }
     
     .line-number {
