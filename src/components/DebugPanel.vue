@@ -5,8 +5,10 @@ import { inject } from 'vue'
 // 注入WASM库的引用
 const zstdLib = inject('zstdLib')
 const snappyLib = inject('snappyLib')
+const brotliLib = inject('brotliLib')
 const zstdLoading = inject('zstdLoading')
 const snappyLoading = inject('snappyLoading')
+const brotliLoading = inject('brotliLoading')
 const initWasmLibs = inject('initWasmLibs')
 
 const debugZstd = async () => {
@@ -82,12 +84,52 @@ const debugSnappy = async () => {
     console.log('=== Snappy 调试结束 ===')
 }
 
+const debugBrotli = async () => {
+    console.log('=== Brotli 调试开始 ===')
+    console.log('brotliLib.value:', brotliLib.value)
+    console.log('brotliLoading.value:', brotliLoading.value)
+    
+    if (brotliLib.value) {
+        try {
+            const testData = new TextEncoder().encode('Hello Brotli!')
+            console.log('测试数据:', testData)
+            
+            if (typeof brotliLib.value.compress === 'function') {
+                const compressed = brotliLib.value.compress(testData)
+                console.log('压缩成功:', compressed)
+                
+                if (typeof brotliLib.value.decompress === 'function') {
+                    const decompressed = brotliLib.value.decompress(compressed)
+                    const result = new TextDecoder().decode(decompressed)
+                    console.log('解压成功:', result)
+                    alert(`Brotli测试成功！原文: "Hello Brotli!" -> 压缩后: ${compressed.length} bytes -> 解压后: "${result}"`)
+                } else {
+                    console.error('Brotli decompress 方法不存在')
+                    alert('Brotli decompress 方法不存在')
+                }
+            } else {
+                console.error('Brotli compress 方法不存在')
+                alert('Brotli compress 方法不存在')
+            }
+        } catch (e) {
+            console.error('Brotli测试失败:', e)
+            alert('Brotli测试失败: ' + e.message)
+        }
+    } else {
+        console.log('Brotli库未加载')
+        alert('Brotli库未加载')
+    }
+    console.log('=== Brotli调试结束 ===')
+}
+
 const forceReload = async () => {
     console.log('=== 强制重新加载 ===')
     zstdLib.value = null
     snappyLib.value = null
+    brotliLib.value = null
     zstdLoading.value = true
     snappyLoading.value = true
+    brotliLoading.value = true
     
     await initWasmLibs()
 }
@@ -98,6 +140,7 @@ const forceReload = async () => {
         <h4>🛠️ WASM库调试</h4>
         <button @click="debugZstd" style="margin-right: 10px; padding: 5px 10px; background: #007acc; color: white; border: none; border-radius: 3px;">测试ZSTD</button>
         <button @click="debugSnappy" style="margin-right: 10px; padding: 5px 10px; background: #007acc; color: white; border: none; border-radius: 3px;">测试Snappy</button>
+        <button @click="debugBrotli" style="margin-right: 10px; padding: 5px 10px; background: #007acc; color: white; border: none; border-radius: 3px;">测试Brotli</button>
         <button @click="forceReload" style="padding: 5px 10px; background: #ff6b35; color: white; border: none; border-radius: 3px;">强制重新加载</button>
     </div>
 </template>

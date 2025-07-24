@@ -17,8 +17,10 @@ if (isDevelopment) {
 // 动态导入 WASM 库 - 使用响应式变量
 const zstdLib = ref(null)
 const snappyLib = ref(null)
+const brotliLib = ref(null)
 const zstdLoading = ref(true)
 const snappyLoading = ref(true)
+const brotliLoading = ref(true)
 
 // 初始化 WASM 库
 const initWasmLibs = async () => {
@@ -83,15 +85,51 @@ const initWasmLibs = async () => {
         }
     }
     
-    // 并行初始化两个库
-    await Promise.allSettled([initZstd(), initSnappy()])
+    // 初始化 Brotli
+    const initBrotli = async () => {
+        try {
+            if (isDevelopment) console.log('开始加载Brotli库...')
+            
+            // 导入brotli-wasm
+            const brotliModule = await import('brotli-wasm')
+            if (isDevelopment) {
+                console.log('Brotli模块导入成功:', brotliModule)
+                console.log('Brotli模块方法:', Object.keys(brotliModule))
+            }
+            
+            // brotli-wasm导出一个Promise，需要等待
+            const brotli = await brotliModule.default
+            if (isDevelopment) {
+                console.log('Brotli初始化成功:', brotli)
+                console.log('Brotli可用方法:', Object.keys(brotli))
+            }
+            
+            brotliLib.value = brotli
+            brotliLoading.value = false
+            if (isDevelopment) console.log('✅ Brotli library loaded successfully')
+        } catch (e) {
+            if (isDevelopment) {
+                console.error('❌ Failed to load Brotli library:', e)
+                console.error('错误详情:', e.message, e.stack)
+            }
+            brotliLoading.value = false
+        }
+    }
+    
+    // 并行初始化三个库
+    await Promise.allSettled([initZstd(), initSnappy(), initBrotli()])
+    
+    // WASM库加载完成后，重新检查并更新默认算法
+    updateDefaultAlgorithm()
     
     if (isDevelopment) {
         console.log('📊 最终状态:', {
             zstdLoaded: !!zstdLib.value,
             snappyLoaded: !!snappyLib.value,
+            brotliLoaded: !!brotliLib.value,
             zstdLoading: zstdLoading.value,
-            snappyLoading: snappyLoading.value
+            snappyLoading: snappyLoading.value,
+            brotliLoading: brotliLoading.value
         })
         console.log('🏁 WASM库初始化完成')
     }
@@ -104,14 +142,32 @@ initWasmLibs()
 if (isDevelopment) {
     provide('zstdLib', zstdLib)
     provide('snappyLib', snappyLib)
+    provide('brotliLib', brotliLib)
     provide('zstdLoading', zstdLoading)
     provide('snappyLoading', snappyLoading)
+    provide('brotliLoading', brotliLoading)
     provide('initWasmLibs', initWasmLibs)
 }
 
 const inputText = ref('')
 const operationType = ref('compress') // 'compress' or 'decompress'
-const compressionAlgorithm = ref('gzip') // 'gzip', 'deflate', 'zstd', 'snappy', 'none'
+
+// 先定义一个简单的默认值，稍后会在算法检测完成后更新
+const compressionAlgorithm = ref('gzip')
+
+// 安全地将Uint8Array转换为Base64
+function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer)
+    let binary = ''
+    const chunkSize = 8192 // 分块处理大数组
+    
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize)
+        binary += String.fromCharCode.apply(null, chunk)
+    }
+    
+    return btoa(binary)
+}
 
 // 压缩和解压缩函数
 async function compressText(text, algorithm) {
@@ -130,7 +186,7 @@ async function compressText(text, algorithm) {
             const compressedStream = stream.pipeThrough(compressionStream)
             const compressedData = await new Response(compressedStream).arrayBuffer()
             const compressedBytes = new Uint8Array(compressedData)
-            return btoa(String.fromCharCode(...compressedBytes))
+            return arrayBufferToBase64(compressedBytes)
         }
         case 'deflate': {
             const compressionStream = new CompressionStream('deflate')
@@ -143,38 +199,34 @@ async function compressText(text, algorithm) {
             const compressedStream = stream.pipeThrough(compressionStream)
             const compressedData = await new Response(compressedStream).arrayBuffer()
             const compressedBytes = new Uint8Array(compressedData)
-            return btoa(String.fromCharCode(...compressedBytes))
+            return arrayBufferToBase64(compressedBytes)
         }
         case 'brotli': {
-            const compressionStream = new CompressionStream('br')
-            const stream = new ReadableStream({
-                start(controller) {
-                    controller.enqueue(data)
-                    controller.close()
-                }
-            })
-            const compressedStream = stream.pipeThrough(compressionStream)
-            const compressedData = await new Response(compressedStream).arrayBuffer()
-            const compressedBytes = new Uint8Array(compressedData)
-            return btoa(String.fromCharCode(...compressedBytes))
+            if (!brotliLib.value) {
+                throw new Error('Brotli library not loaded')
+            }
+            // brotli-wasm的compress函数接受Uint8Array和options对象
+            const compressed = brotliLib.value.compress(data, { quality: 6 })
+            // 安全地转换为Base64
+            return arrayBufferToBase64(compressed)
         }
         case 'zstd': {
             if (!zstdLib.value) {
                 throw new Error('ZSTD library not loaded')
             }
             const compressed = zstdLib.value.compress(data, 3) // 使用压缩级别3
-            return btoa(String.fromCharCode(...compressed))
+            return arrayBufferToBase64(compressed)
         }
         case 'snappy': {
             if (!snappyLib.value) {
                 throw new Error('Snappy library not loaded')
             }
             const compressed = snappyLib.value.compress(data)
-            return btoa(String.fromCharCode(...compressed))
+            return arrayBufferToBase64(compressed)
         }
         case 'none': {
             // 直接转换为base64，不压缩
-            return btoa(String.fromCharCode(...data))
+            return arrayBufferToBase64(data)
         }
         default:
             throw new Error('Unsupported compression algorithm')
@@ -183,8 +235,22 @@ async function compressText(text, algorithm) {
 
 async function decompressText(base64String, algorithm) {
     try {
+        // 验证Base64字符串格式
+        if (!base64String || typeof base64String !== 'string') {
+            throw new Error('Invalid input: empty or non-string input')
+        }
+        
+        // 清理Base64字符串（移除空格和换行符）
+        const cleanBase64 = base64String.trim().replace(/\s/g, '')
+        
+        // 验证Base64格式
+        const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/
+        if (!base64Regex.test(cleanBase64)) {
+            throw new Error('Invalid Base64 format')
+        }
+        
         // 从base64解码
-        const binaryString = atob(base64String)
+        const binaryString = atob(cleanBase64)
         const compressedData = new Uint8Array(binaryString.length)
         for (let i = 0; i < binaryString.length; i++) {
             compressedData[i] = binaryString.charCodeAt(i)
@@ -218,17 +284,12 @@ async function decompressText(base64String, algorithm) {
                 return decoder.decode(decompressedData)
             }
             case 'brotli': {
-                const decompressionStream = new DecompressionStream('br')
-                const stream = new ReadableStream({
-                    start(controller) {
-                        controller.enqueue(compressedData)
-                        controller.close()
-                    }
-                })
-                const decompressedStream = stream.pipeThrough(decompressionStream)
-                const decompressedData = await new Response(decompressedStream).arrayBuffer()
+                if (!brotliLib.value) {
+                    throw new Error('Brotli library not loaded')
+                }
+                const decompressed = brotliLib.value.decompress(compressedData)
                 const decoder = new TextDecoder()
-                return decoder.decode(decompressedData)
+                return decoder.decode(decompressed)
             }
             case 'zstd': {
                 if (!zstdLib.value) {
@@ -323,13 +384,100 @@ const isCompressionSupported = computed(() => {
     return typeof CompressionStream !== 'undefined' && typeof DecompressionStream !== 'undefined'
 })
 
+// 检查各种压缩算法支持
+const algorithmSupport = ref({
+    gzip: false,
+    deflate: false,
+    brotli: false
+})
+
+// 检测各种压缩算法支持
+const detectAlgorithmSupport = async () => {
+    const testData = new Uint8Array([72, 101, 108, 108, 111]) // "Hello"
+    
+    // 检测 GZIP 支持
+    try {
+        const compressionStream = new CompressionStream('gzip')
+        const inputStream = new ReadableStream({
+            start(controller) {
+                controller.enqueue(testData)
+                controller.close()
+            }
+        })
+        const compressedStream = inputStream.pipeThrough(compressionStream)
+        await new Response(compressedStream).arrayBuffer()
+        algorithmSupport.value.gzip = true
+        if (isDevelopment) console.log('✅ GZIP compression test passed')
+    } catch (e) {
+        algorithmSupport.value.gzip = false
+        if (isDevelopment) console.warn('❌ GZIP not supported:', e.message)
+    }
+    
+    // 检测 Deflate 支持
+    try {
+        const compressionStream = new CompressionStream('deflate')
+        const inputStream = new ReadableStream({
+            start(controller) {
+                controller.enqueue(testData)
+                controller.close()
+            }
+        })
+        const compressedStream = inputStream.pipeThrough(compressionStream)
+        await new Response(compressedStream).arrayBuffer()
+        algorithmSupport.value.deflate = true
+        if (isDevelopment) console.log('✅ Deflate compression test passed')
+    } catch (e) {
+        algorithmSupport.value.deflate = false
+        if (isDevelopment) console.warn('❌ Deflate not supported:', e.message)
+    }
+    
+    // Brotli 通过 WASM 库支持，状态在库加载后确定
+    // algorithmSupport.value.brotli 在这里不设置，由isAlgorithmAvailable动态检查
+    if (isDevelopment) console.log('ℹ️ Brotli support depends on WASM library loading')
+    
+    // 算法检测完成后，智能调整默认算法
+    updateDefaultAlgorithm()
+    
+    if (isDevelopment) {
+        console.log('算法支持检测结果:', algorithmSupport.value)
+    }
+}
+
+// 更新默认算法选择
+const updateDefaultAlgorithm = () => {
+    // 如果当前选择的算法不可用，自动切换到可用的算法
+    if (!isAlgorithmAvailable(compressionAlgorithm.value)) {
+        if (isAlgorithmAvailable('brotli')) {
+            compressionAlgorithm.value = 'brotli'
+        } else if (isAlgorithmAvailable('gzip')) {
+            compressionAlgorithm.value = 'gzip'
+        } else if (isAlgorithmAvailable('deflate')) {
+            compressionAlgorithm.value = 'deflate'
+        } else if (isAlgorithmAvailable('zstd')) {
+            compressionAlgorithm.value = 'zstd'
+        } else if (isAlgorithmAvailable('snappy')) {
+            compressionAlgorithm.value = 'snappy'
+        } else {
+            compressionAlgorithm.value = 'gzip' // 默认回退到gzip
+        }
+        if (isDevelopment) console.log('🔄 自动切换到可用算法:', compressionAlgorithm.value)
+    }
+}
+
+// 执行算法支持检测
+if (isCompressionSupported.value) {
+    detectAlgorithmSupport()
+}
+
 // 检查 WASM 库支持
 const wasmLibraryStatus = computed(() => {
     return {
         zstd: !!zstdLib.value,
         snappy: !!snappyLib.value,
+        brotli: !!brotliLib.value,
         zstdLoading: zstdLoading.value,
-        snappyLoading: snappyLoading.value
+        snappyLoading: snappyLoading.value,
+        brotliLoading: brotliLoading.value
     }
 })
 
@@ -337,9 +485,11 @@ const wasmLibraryStatus = computed(() => {
 const isAlgorithmAvailable = (algorithm) => {
     switch (algorithm) {
         case 'gzip':
+            return isCompressionSupported.value && algorithmSupport.value.gzip
         case 'deflate':
+            return isCompressionSupported.value && algorithmSupport.value.deflate
         case 'brotli':
-            return isCompressionSupported.value
+            return !!brotliLib.value
         case 'zstd':
             return wasmLibraryStatus.value.zstd
         case 'snappy':
@@ -354,10 +504,16 @@ const isAlgorithmAvailable = (algorithm) => {
 // 计算压缩比
 const compressionRatio = computed(() => {
     if (operationType.value === 'compress' && inputText.value && result.value && !result.value.startsWith('Error:')) {
-        const originalSize = new TextEncoder().encode(inputText.value).length
-        const compressedSize = atob(result.value).length
-        const ratio = ((originalSize - compressedSize) / originalSize * 100).toFixed(1)
-        return ratio > 0 ? `${ratio}%` : '0%'
+        try {
+            const originalSize = new TextEncoder().encode(inputText.value).length
+            // 安全地计算Base64解码后的大小
+            const cleanBase64 = result.value.trim().replace(/\s/g, '')
+            const compressedSize = Math.ceil(cleanBase64.length * 3 / 4) - (cleanBase64.match(/=/g) || []).length
+            const ratio = ((originalSize - compressedSize) / originalSize * 100).toFixed(1)
+            return ratio > 0 ? `${ratio}%` : '0%'
+        } catch (e) {
+            return 'N/A'
+        }
     }
     return ''
 })
@@ -382,13 +538,18 @@ const compressionRatio = computed(() => {
     <div class="wasm-status">
         <h4>Algorithm Availability</h4>
         <div class="status-grid">
-            <div class="status-item" :class="{ 'available': isCompressionSupported }">
-                <span class="status-icon">{{ isCompressionSupported ? '✅' : '❌' }}</span>
-                GZIP & Deflate (Native API)
+            <div class="status-item" :class="{ 'available': algorithmSupport.gzip }">
+                <span class="status-icon">{{ algorithmSupport.gzip ? '✅' : '❌' }}</span>
+                GZIP (Native API)
             </div>
-            <div class="status-item" :class="{ 'available': isCompressionSupported }">
-                <span class="status-icon">{{ isCompressionSupported ? '✅' : '❌' }}</span>
-                Brotli (Native API)
+            <div class="status-item" :class="{ 'available': algorithmSupport.deflate }">
+                <span class="status-icon">{{ algorithmSupport.deflate ? '✅' : '❌' }}</span>
+                Deflate (Native API)
+            </div>
+            <div class="status-item" :class="{ 'available': wasmLibraryStatus.brotli, 'loading': wasmLibraryStatus.brotliLoading && !wasmLibraryStatus.brotli }">
+                <span class="status-icon">{{ wasmLibraryStatus.brotli ? '✅' : (wasmLibraryStatus.brotliLoading ? '⏳' : '❌') }}</span>
+                Brotli (WebAssembly)
+                <span v-if="wasmLibraryStatus.brotliLoading && !wasmLibraryStatus.brotli" class="loading-text">Loading...</span>
             </div>
             <div class="status-item" :class="{ 'available': wasmLibraryStatus.zstd, 'loading': wasmLibraryStatus.zstdLoading && !wasmLibraryStatus.zstd }">
                 <span class="status-icon">
@@ -429,7 +590,7 @@ const compressionRatio = computed(() => {
                     Deflate {{ !isAlgorithmAvailable('deflate') ? '(Not Available)' : '' }}
                 </option>
                 <option value="brotli" :disabled="!isAlgorithmAvailable('brotli')">
-                    Brotli {{ !isAlgorithmAvailable('brotli') ? '(Not Available)' : '' }}
+                    Brotli {{ !isAlgorithmAvailable('brotli') ? '(Loading...)' : '' }}
                 </option>
                 <option value="zstd" :disabled="!isAlgorithmAvailable('zstd')">
                     ZSTD {{ !isAlgorithmAvailable('zstd') ? '(Loading...)' : '' }}
@@ -1039,6 +1200,31 @@ const compressionRatio = computed(() => {
 .result-value::-webkit-scrollbar-thumb {
     background: #c1c1c1;
     border-radius: 4px;
+}
+
+/* 错误提示样式 */
+.error-text {
+    color: #dc3545;
+    font-size: 11px;
+    font-style: italic;
+}
+
+.loading-text {
+    color: #6c757d;
+    font-size: 11px;
+    font-style: italic;
+}
+
+.status-item.available {
+    color: #28a745;
+}
+
+.status-item:not(.available) {
+    color: #6c757d;
+}
+
+.status-item.loading {
+    color: #ffc107;
 }
 
 .result-value::-webkit-scrollbar-thumb:hover {

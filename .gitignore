@@ -24,4 +24,5 @@ dist-ssr
 *.sw?
 *.md
 *.txt
+*-test.html
 /docs
