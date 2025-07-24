@@ -3,6 +3,8 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import BaseConverter from './components/BaseConverter.vue'
 import TimestampConverter from './components/TimestampConverter.vue'
 import JsonFormatter from './components/JsonFormatter.vue'
+import Base64Converter from './components/Base64Converter.vue'
+import CompressionTool from './components/CompressionTool.vue'
 
 const activeTab = ref('base')
 const isSidebarOpen = ref(window.innerWidth > 768)
@@ -40,7 +42,9 @@ onUnmounted(() => {
 const tabs = [
   { id: 'base', label: 'Base Converter' },
   { id: 'timestamp', label: 'Timestamp Converter' },
-  { id: 'json', label: 'JSON Formatter' }
+  { id: 'json', label: 'JSON Formatter' },
+  { id: 'base64', label: 'Base64 Converter' },
+  { id: 'compression', label: 'Compression Tool' }
 ]
 </script>
 
@@ -70,6 +74,8 @@ const tabs = [
         <BaseConverter v-show="activeTab === 'base'" />
         <TimestampConverter v-show="activeTab === 'timestamp'" />
         <JsonFormatter v-show="activeTab === 'json'" />
+        <Base64Converter v-show="activeTab === 'base64'" />
+        <CompressionTool v-show="activeTab === 'compression'" />
               </div>
       </main>
     </div>

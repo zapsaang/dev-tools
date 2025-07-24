@@ -6,9 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:verify": "npm run build && node scripts/verify-production-build.js"
   },
   "dependencies": {
+    "@bokuweb/zstd-wasm": "^0.0.27",
+    "snappyjs": "^0.7.0",
     "vue": "^3.3.8"
   },
   "devDependencies": {
