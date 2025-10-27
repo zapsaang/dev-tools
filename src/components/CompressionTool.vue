@@ -241,8 +241,7 @@ async function decompressText(base64String, algorithm) {
         }
         
         // 清理Base64字符串（移除所有空白字符、换行符、回车符等）
-        // \s 匹配所有空白字符（空格、制表符、换行符、回车符等）
-        const cleanBase64 = base64String.trim().replace(/[\s\r\n\t]/g, '')
+        const cleanBase64 = base64String.trim().replace(/[\s\t]|\\r|\\n/g, '')
         
         // 验证Base64格式
         const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/
